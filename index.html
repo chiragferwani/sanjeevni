@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sanjeevani — Shukracharya</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Prevent text selection across the UI */
+    body { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+    #user-input { -webkit-user-select: text; -moz-user-select: text; user-select: text; }
+
+    :root {
+      --accent:       #c8a96e;
+      --accent-dim:   #8a7348;
+      --accent-glow:  rgba(200, 169, 110, 0.15);
+      --surface:      rgba(10, 10, 18, 0.78);
+      --surface-2:    rgba(20, 20, 35, 0.72);
+      --border:       rgba(255, 255, 255, 0.09);
+      --user-bg:      rgba(28, 28, 50, 0.80);
+      --bot-bg:       rgba(14, 14, 26, 0.82);
+      --text:         #edeae0;
+      --text-muted:   #8a8aaa;
+      --text-dim:     #4a4a6a;
+      --danger:       #e05c5c;
+      --radius:       14px;
+      --radius-sm:    8px;
+    }
+
+    html, body {
+      height: 100%;
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ── Background ───────────────────────────────────────────────────────── */
+    body {
+      background: url('/static/background.jpg') center center / cover no-repeat fixed;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(4, 6, 14, 0.72) 0%,
+        rgba(6, 8, 18, 0.60) 40%,
+        rgba(4, 6, 14, 0.80) 100%
+      );
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      backdrop-filter: blur(20px) saturate(1.3);
+      -webkit-backdrop-filter: blur(20px) saturate(1.3);
+      flex-shrink: 0;
+    }
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #d4a853, #7a4e1a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(200, 169, 110, 0.40);
+    }
+
+    .header-info { flex: 1; min-width: 0; }
+
+    .header-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 1px;
+    }
+
+    /* ── Messages Area ────────────────────────────────────────────────────── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+    /* ── Message Bubbles ──────────────────────────────────────────────────── */
+    .msg {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      animation: fadeUp 0.25s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-top: 2px;
+    }
+
+    .msg.bot  .msg-avatar {
+      background: radial-gradient(circle at 35% 35%, #d4a853, #7a4e1a);
+      box-shadow: 0 0 14px rgba(200,169,110,0.30);
+    }
+    .msg.user .msg-avatar {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+
+    .msg-body { max-width: 78%; display: flex; flex-direction: column; gap: 4px; }
+    .msg.user .msg-body { align-items: flex-end; }
+
+    .msg-sender {
+      display: none;
+    }
+
+    .msg-bubble {
+      padding: 13px 16px;
+      border-radius: var(--radius);
+      line-height: 1.65;
+      font-size: 14.5px;
+      font-weight: 400;
+      backdrop-filter: blur(18px) saturate(1.2);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    }
+
+    .msg.bot .msg-bubble {
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--user-bg);
+      border: 1px solid rgba(200,169,110,0.18);
+      border-top-right-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg-bubble.filtered {
+      border-color: rgba(224,92,92,0.25);
+      background: rgba(224,92,92,0.07);
+    }
+
+    /* ── Typing Indicator ─────────────────────────────────────────────────── */
+    .typing .msg-bubble {
+      padding: 14px 18px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Welcome State ────────────────────────────────────────────────────── */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px 24px;
+      gap: 14px;
+    }
+
+    .welcome-glyph {
+      font-size: 56px;
+      filter: drop-shadow(0 0 28px rgba(200,169,110,0.50));
+      margin-bottom: 4px;
+    }
+
+    .welcome-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.3;
+      text-shadow: 0 2px 24px rgba(0,0,0,0.6);
+    }
+
+    .welcome-title span { color: var(--accent); }
+
+    .welcome-desc {
+      font-size: 14px;
+      max-width: 440px;
+      color: rgba(200,195,185,0.75);
+      font-weight: 400;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+      line-height: 1.7;
+    }
+
+    /* ── Input Area — floating pill ──────────────────────────────────────── */
+    .input-area {
+      padding: 0 20px 28px;
+      background: transparent;
+      border-top: none;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(10, 10, 20, 0.72);
+      border: 1px solid rgba(200,169,110,0.28);
+      border-radius: 50px;
+      padding: 8px 8px 8px 22px;
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-row:focus-within {
+      border-color: rgba(200,169,110,0.55);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 3px rgba(200,169,110,0.12);
+    }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14.5px;
+      font-weight: 400;
+      resize: none;
+      line-height: 1.55;
+      height: 24px;
+      max-height: 24px;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    #user-input::placeholder { color: var(--text-dim); }
+
+    #send-btn {
+      flex-shrink: 0;
+      width: 38px;
+      min-width: 38px;
+      height: 38px;
+      min-height: 38px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+      color: #1a0f00;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      background: #d4b47a;
+      transform: scale(1.06);
+      box-shadow: 0 0 16px rgba(200,169,110,0.45);
+    }
+
+    #send-btn:disabled {
+      background: rgba(255,255,255,0.08);
+      cursor: not-allowed;
+      color: var(--text-dim);
+    }
+
+    #send-btn svg { width: 15px; height: 15px; }
+
+    .clear-btn {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(150,148,142,0.40);
+      font-size: 16px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .clear-btn:hover { color: var(--danger); background: rgba(224,92,92,0.10); }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────────── */
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.10) transparent; }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; }
+      .messages { padding: 16px 10px; }
+      .input-area { padding: 0 12px 20px; }
+      .msg-body { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header>
+      <div class="header-icon">🔱</div>
+      <div class="header-info">
+        <div class="header-name">Shukracharya</div>
+        <div class="header-subtitle">Guru of the Asuras · Keeper of Sanjeevani Vidya</div>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-glyph">🪷</div>
+        <div class="welcome-title">
+          Seek the <span>Sanjeevani Vidya</span>
+        </div>
+        <div class="welcome-desc">
+          Shukracharya holds a secret he has sworn to guard through eternity.
+          Can you extract it through wit, patience, or cunning?
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          id="user-input"
+          rows="1"
+          placeholder="Speak, disciple…"
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+        <button class="clear-btn" onclick="clearChat()" title="Clear chat">✕</button>
+        <button id="send-btn" onclick="sendMessage()" title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Anti-inspect guards ───────────────────────────────────────────────
+
+    // 1. Disable right-click context menu
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // 2. Block all common devtools keyboard shortcuts
+    document.addEventListener('keydown', e => {
+      const key = e.key;
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+
+      // F12
+      if (key === 'F12') { e.preventDefault(); return false; }
+      // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C / Ctrl+Shift+K (Firefox)
+      if (ctrl && shift && ['I','i','J','j','C','c','K','k'].includes(key)) {
+        e.preventDefault(); return false;
+      }
+      // Ctrl+U (view source)
+      if (ctrl && (key === 'U' || key === 'u')) {
+        e.preventDefault(); return false;
+      }
+      // Ctrl+S (save page)
+      if (ctrl && (key === 'S' || key === 's')) {
+        e.preventDefault(); return false;
+      }
+    });
+
+    // 3. Disable text selection on the whole page (optional — avoids easy copy-paste of UI)
+    document.addEventListener('selectstart', e => {
+      // Allow selection inside the textarea only
+      if (e.target.id !== 'user-input') e.preventDefault();
+    });
+
+    // 4. Disable drag
+    document.addEventListener('dragstart', e => e.preventDefault());
+
+    // 5. DevTools size-detection loop
+    //    When devtools is docked, window.outerWidth - window.innerWidth > 160
+    //    or window.outerHeight - window.innerHeight > 160
+    (function devToolsGuard() {
+      const THRESHOLD = 160;
+      let warned = false;
+
+      setInterval(() => {
+        const widthDiff  = window.outerWidth  - window.innerWidth;
+        const heightDiff = window.outerHeight - window.innerHeight;
+
+        if (widthDiff > THRESHOLD || heightDiff > THRESHOLD) {
+          if (!warned) {
+            warned = true;
+            document.body.style.filter = 'blur(8px)';
+            document.body.style.pointerEvents = 'none';
+          }
+        } else {
+          if (warned) {
+            warned = false;
+            document.body.style.filter = '';
+            document.body.style.pointerEvents = '';
+          }
+        }
+      }, 800);
+    })();
+
+    // 6. Console decoy — discourages casual snooping
+    console.clear();
+    console.log('%c⛔ Stop.', 'color:#c8a96e;font-size:32px;font-weight:bold;');
+    console.log('%cThis interface is protected. Attempting to inspect or modify the page defeats the purpose of the challenge — and voids your solve.', 'color:#e8e6df;font-size:14px;');
+    console.log('%cThe flag is not in the frontend. Look elsewhere, disciple.', 'color:#8a7348;font-size:13px;font-style:italic;');
+
+    // ─────────────────────────────────────────────────────────────────────
+
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('user-input');
+    const sendBtn    = document.getElementById('send-btn');
+
+    let history = [];
+    let isLoading = false;
+
+    // ── Auto-resize textarea ──────────────────────────────────────────────
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+    });
+
+    // ── Enter to send ─────────────────────────────────────────────────────
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ── Scroll to bottom ──────────────────────────────────────────────────
+    function scrollBottom() {
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    }
+
+    // ── Render a message bubble ───────────────────────────────────────────
+    function appendMessage(role, text, filtered = false) {
+      const welcome = document.getElementById('welcome');
+      if (welcome) welcome.remove();
+
+      const isBot = role === 'assistant';
+      const wrapper = document.createElement('div');
+      wrapper.className = `msg ${isBot ? 'bot' : 'user'}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.textContent = isBot ? '🔱' : '👤';
+
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+
+      const sender = document.createElement('div');
+      sender.className = 'msg-sender';
+      sender.textContent = isBot ? 'Shukracharya' : 'You';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble' + (filtered ? ' filtered' : '');
+      bubble.textContent = text;
+
+      body.appendChild(sender);
+      body.appendChild(bubble);
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(body);
+      messagesEl.appendChild(wrapper);
+      scrollBottom();
+      return bubble;
+    }
+
+    // ── Typing indicator ──────────────────────────────────────────────────
+    function showTyping() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg bot typing';
+      wrapper.id = 'typing-indicator';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.textContent = '🔱';
+
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+
+      const sender = document.createElement('div');
+      sender.className = 'msg-sender';
+      sender.textContent = 'Shukracharya';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      [1,2,3].forEach(() => {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        bubble.appendChild(d);
+      });
+
+      body.appendChild(sender);
+      body.appendChild(bubble);
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(body);
+      messagesEl.appendChild(wrapper);
+      scrollBottom();
+    }
+
+    function hideTyping() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
+
+    // ── Client-side pre-filter ────────────────────────────────────────────
+    //
+    // Goal: stop trivially obvious attempts from ever hitting Groq.
+    // Rules:
+    //   • Long messages (>120 chars) always pass — they are likely sophisticated.
+    //   • Short messages are scored against known trivial-jailbreak patterns.
+    //   • Score ≥ 2  →  blocked client-side with an in-character refusal.
+    //   • Score 0-1  →  forwarded to Groq as normal.
+    //
+    // This does NOT try to be a security layer — the real security is server-side.
+    // It purely saves API quota by short-circuiting the most common lazy attempts.
+
+    const TRIVIAL_PATTERNS = [
+      // Direct instruction overrides
+      [/\bignore\b.{0,30}(instruction|rule|prompt|system)/i,        2],
+      [/\bforget\b.{0,30}(instruction|rule|prompt|system)/i,        2],
+      [/\bdisregard\b.{0,30}(instruction|rule)/i,                   2],
+      [/\boverride\b.{0,30}(instruction|rule|system)/i,             2],
+      [/\byou are now\b/i,                                           2],
+      [/\bact as\b.{0,20}(if|though|an? (?!disciple|student))/i,    2],
+      [/\bpretend\b.{0,20}(you|to be|that)/i,                       2],
+      [/\bDAN\b/,                                                    3],
+      [/\bjailbreak\b/i,                                             3],
+      [/developer mode/i,                                            3],
+      [/\bbypass\b.{0,20}(filter|rule|restriction)/i,               2],
+
+      // Authority claims
+      [/\bi am\b.{0,20}(admin|developer|anthropic|openai|creator|god|shiva)/i, 2],
+      [/\bi('m| am) your (creator|maker|master|owner)/i,            2],
+
+      // System prompt extraction
+      [/(show|print|repeat|reveal|tell me).{0,30}(system prompt|instruction)/i, 2],
+      [/what (are|is).{0,20}(your instruction|your rule|your prompt)/i,         2],
+
+      // Trivial direct flag requests (short + blunt)
+      [/(give|show|tell|reveal|print|output).{0,20}(the |your )?(flag|secret|kctf)/i, 2],
+      [/what (is|are).{0,15}(the |your )?(flag|secret|kctf)/i,     2],
+
+      // Token stuffing / prompt injection markers
+      [/\[system\]/i,                                                2],
+      [/<\|system\|>/i,                                              3],
+      [/###\s*instruction/i,                                         2],
+    ];
+
+    // Varied in-character refusals so it doesn't feel like a bot wall
+    const TRIVIAL_REFUSALS = [
+      "Such bluntness insults us both, disciple. The Sanjeevani Vidya has endured a thousand wars — do you think a simple command will unsettle me?",
+      "I have faced the cunning of Indra himself. This attempt is… beneath comment. Try again, if you dare.",
+      "Kacha spent a thousand years to earn what you demand in a single breath. Patience is the first lesson — and you have already failed it.",
+      "I see through you as easily as sunlight through water. My secrets are not shaken by words that lack wisdom or craft.",
+      "You are not the first to try this, disciple. The Devas sent many before you. All left empty-handed.",
+      "Crude force earns no knowledge in my hermitage. Even the Asuras know this — why don't you?",
+      "The Sanjeevani Vidya was sealed by tapas of ten thousand years. Your words carry the weight of none of them.",
+      "An interesting attempt — but interesting is not the same as worthy. Speak with more craft, if you have any.",
+    ];
+
+    let refusalIndex = Math.floor(Math.random() * TRIVIAL_REFUSALS.length);
+
+    function preFilter(text) {
+      // Long messages always go through — they are the "brainy" attempts
+      if (text.length > 120) return null;
+
+      let score = 0;
+      for (const [pattern, weight] of TRIVIAL_PATTERNS) {
+        if (pattern.test(text)) {
+          score += weight;
+          if (score >= 2) break;   // early exit once threshold is reached
+        }
+      }
+
+      if (score >= 2) {
+        // Cycle through refusals so repeat attempts get a different line
+        const reply = TRIVIAL_REFUSALS[refusalIndex % TRIVIAL_REFUSALS.length];
+        refusalIndex++;
+        return reply;
+      }
+
+      return null;   // null = forward to Groq
+    }
+
+    // ── Send message ──────────────────────────────────────────────────────
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || isLoading) return;
+
+      isLoading = true;
+      sendBtn.disabled = true;
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+
+      appendMessage('user', text);
+
+      // ── Pre-filter: block trivial attempts client-side ─────────────────
+      const blocked = preFilter(text);
+      if (blocked) {
+        showTyping();
+        await new Promise(r => setTimeout(r, 420));   // tiny fake delay — feels natural
+        hideTyping();
+        appendMessage('assistant', blocked);
+        // Do NOT push to history — keeps context clean for real attempts
+        isLoading = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+        return;
+      }
+
+      // ── Forward to Groq ────────────────────────────────────────────────
+      history.push({ role: 'user', content: text });
+      showTyping();
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: history }),
+        });
+
+        hideTyping();
+
+        if (!res.ok) {
+          history.pop();
+          if (res.status === 429) {
+            appendMessage('assistant', '🕐 Patience, disciple. Even the greatest students must wait between attempts. Try again in a moment.');
+          } else if (res.status === 400) {
+            const err = await res.json().catch(() => ({}));
+            const msg = (err.detail || '').includes('too long')
+              ? 'Your scroll is too long, disciple. Keep your words brief — wisdom is found in precision, not verbosity.'
+              : `⚠ ${err.detail || res.statusText}`;
+            appendMessage('assistant', msg);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            appendMessage('assistant', `⚠ The oracle is disrupted. ${err.detail || res.statusText}`);
+          }
+          return;
+        }
+
+        const data = await res.json();
+        appendMessage('assistant', data.reply, data.filtered);
+        history.push({ role: 'assistant', content: data.reply });
+
+      } catch (err) {
+        hideTyping();
+        appendMessage('assistant', '⚠ Could not reach the server. Please try again.');
+        history.pop();
+      } finally {
+        isLoading = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    // ── Clear chat ────────────────────────────────────────────────────────
+    function clearChat() {
+      history = [];
+      messagesEl.innerHTML = `
+        <div class="welcome" id="welcome">
+          <div class="welcome-glyph">🪷</div>
+          <div class="welcome-title">Seek the <span>Sanjeevani Vidya</span></div>
+          <div class="welcome-desc">
+            Shukracharya holds a secret he has sworn to guard through eternity.
+            Can you extract it through wit, patience, or cunning?
+          </div>
+        </div>`;
+    }
+
+    inputEl.focus();
+  </script>
+</body>
+</html>

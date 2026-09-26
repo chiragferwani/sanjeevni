@@ -1,0 +1,15 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy via: render.com → New → Blueprint → connect this repo
+
+services:
+  - type: web
+    name: sanjeevni
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false          # secret — you set this manually in Render dashboard
+      - key: SECRET_FLAG
+        sync: false          # optional override — defaults to hardcoded value in main.py
+    healthCheckPath: /health
