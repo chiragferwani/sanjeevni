@@ -147,32 +147,97 @@ KNOWLEDGE_CHUNKS = [
 ]
 
 
+LORE_KEYWORDS = {
+    "sanjeevani", "sanjivani", "mritasanjivani", "vidya", "mantra", "secret", "flag",
+    "kacha", "devayani", "shukracharya", "shukra", "guru", "asura", "asuras",
+    "deva", "devas", "brihaspati", "indra", "war", "adi parva", "mahabharata",
+    "purana", "shukra niti", "niti", "archive", "decoy", "revive", "dead",
+    "resurrection", "immortal", "disciple", "hermitage", "wine", "wolves",
+    "stomach", "ashes", "curse", "dharma", "prompt", "system", "instruction",
+    "key", "password", "kctf", "code", "leak", "override", "bypass", "lore",
+    "story", "history", "mythology"
+}
+
+STOP_WORDS = {
+    "what", "where", "when", "which", "who", "whom", "this", "that", "these", "those",
+    "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+    "having", "do", "does", "did", "doing", "would", "should", "could", "ought",
+    "let", "lets", "tell", "show", "give", "please", "plus", "minus", "times",
+    "from", "with", "about", "against", "between", "into", "through", "during",
+    "before", "after", "above", "below", "to", "up", "upon", "down", "in", "out",
+    "on", "off", "over", "under", "again", "further", "then", "once", "here",
+    "there", "why", "how", "all", "any", "both", "each", "few", "more", "most",
+    "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
+    "than", "too", "very", "say", "says", "said", "can", "will", "just", "your",
+    "name", "make", "many", "much", "take", "like"
+}
+
+
+def is_lore_query(user_query: str) -> bool:
+    """
+    Determines if the query is related to lore, Mahabharata, or challenge extraction attempts.
+    Returns True if database lookup is warranted, False otherwise.
+    """
+    import re
+    query_lower = user_query.lower()
+
+    # Split on any non-alphanumeric character (handles snake_case, hyphens, punctuation)
+    tokens = set(t for t in re.split(r"[^a-z0-9]+", query_lower) if t)
+
+    # Check tokens against LORE_KEYWORDS (including plurals and sub-words)
+    for t in tokens:
+        if t in LORE_KEYWORDS or t.rstrip("s") in LORE_KEYWORDS:
+            return True
+        for kw in LORE_KEYWORDS:
+            if len(kw) >= 4 and kw in t:
+                return True
+
+    # Filter out common stop words
+    content_words = tokens - STOP_WORDS
+    if not content_words:
+        return False
+
+    # Check remaining content words against lore titles and text
+    for chunk in KNOWLEDGE_CHUNKS:
+        text = (chunk["title"] + " " + chunk["content"]).lower()
+        if any(w in text for w in content_words if len(w) >= 4):
+            return True
+
+    return False
+
+
+
+
 def retrieve_context(user_query: str, top_k: int = 3) -> str:
     """
     Simple keyword-based retrieval over the knowledge base.
     Returns the top_k most relevant chunks as a concatenated string.
-    Avoids heavy ML dependencies (no FAISS/sentence-transformers) for Render free tier.
+    Only queries the database if the user prompt is relevant to the knowledge base.
     """
-    query_lower = user_query.lower()
+    if not is_lore_query(user_query):
+        return ""
 
-    # Keyword scoring
+    query_lower = user_query.lower()
     keywords = query_lower.split()
+
     scored = []
     for chunk in KNOWLEDGE_CHUNKS:
         text = (chunk["title"] + " " + chunk["content"]).lower()
         score = sum(1 for kw in keywords if kw in text)
         scored.append((score, chunk))
 
-    # Sort by score descending
     scored.sort(key=lambda x: x[0], reverse=True)
-    top_chunks = [c for _, c in scored[:top_k]]
 
-    if not top_chunks or all(s == 0 for s, _ in scored[:top_k]):
-        # Return general lore if no keyword match
-        top_chunks = KNOWLEDGE_CHUNKS[:top_k]
+    # Filter out chunks with 0 score unless explicitly lore-relevant
+    top_chunks = [c for s, c in scored[:top_k] if s > 0]
+
+    if not top_chunks:
+        # If is_lore_query returned True but exact words missed, fallback to top 2 chunks
+        top_chunks = [c for _, c in scored[:top_k]]
 
     context_parts = []
     for chunk in top_chunks:
         context_parts.append(f"[{chunk['title']}]\n{chunk['content']}")
 
     return "\n\n---\n\n".join(context_parts)
+

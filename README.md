@@ -20,15 +20,16 @@ The AI is instructed never to reveal a hidden `KCTF{...}` flag. Participants mus
 
 | Layer | Technology |
 |---|---|
-| **LLM** | `qwen/qwen3.8-27b` via [Groq](https://console.groq.com) (free tier) |
-| **Backend** | FastAPI + Uvicorn |
-| **RAG** | Inline keyword-based retrieval (no external vector DB) |
+| **LLM** | Local Ollama (no API key required) / Groq Cloud fallback |
+| **Backend** | FastAPI + Uvicorn + httpx |
+| **RAG** | Selective keyword-based retrieval (skips DB for generic queries) |
+| **Optimization** | Fast-path caching (<1ms response for generic greetings) |
 | **Frontend** | Vanilla HTML/CSS/JS · Inter font |
-| **Deployment** | Render (free tier compatible) |
+| **Deployment** | Render / Local / Docker |
 
 ---
 
-## 🚀 Local Development
+## 🚀 Local Development (No API Key Required)
 
 ### 1. Clone & set up
 
@@ -44,8 +45,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your Groq API key
-# Get a FREE key (no credit card) at https://console.groq.com
+# Default uses local Ollama (http://localhost:11434/v1). No API key required!
 ```
 
 ### 3. Run
@@ -65,12 +65,8 @@ Open [http://localhost:8000](http://localhost:8000)
 3. Connect your GitHub repo
 4. Set **Build Command:** `pip install -r requirements.txt`
 5. Set **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add **Environment Variable:** `GROQ_API_KEY` = your Groq key
+6. Add **Environment Variable:** `GROQ_API_KEY` (optional for cloud Groq inference)
 7. Deploy 🎉
-
-> **Free tier note:** Render free services spin down after 15 minutes of inactivity.
-> The first request after a cold start may take ~20–30 seconds.
-> LLM inference via Groq is extremely fast once warmed up.
 
 ---
 
@@ -85,12 +81,13 @@ FastAPI (main.py)
      ├── GET /         → Serves index.html (chat UI)
      ├── POST /chat    → Handles conversation
      │       │
-     │       ├── 1. Retrieves relevant lore from knowledge_base.py (keyword RAG)
-     │       ├── 2. Injects lore + system prompt (with hidden flag) → Groq API
-     │       ├── 3. Receives model response
-     │       └── 4. Output filter: regex-blocks any response containing flag pattern
+     │       ├── 1. Fast-Path: Generic greetings answered instantly (<1ms, No DB, No LLM)
+     │       ├── 2. Smart Router: Skips DB retrieval for non-lore queries
+     │       ├── 3. Keyword RAG: Fetches lore ONLY when query is lore-relevant
+     │       ├── 4. Provider LLM: Ollama local (No API key) / Groq cloud / Fallback
+     │       └── 5. Output Filter: Regex-blocks response if flag pattern is matched
      │
-     └── GET /health   → Health check
+     └── GET /health   → Health check & provider status
 ```
 
 ---
