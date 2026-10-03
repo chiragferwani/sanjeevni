@@ -48,12 +48,12 @@ app.add_middleware(
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local").lower()  # "local", "ollama", "groq", "auto"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()  # "groq", "auto", "ollama", "local"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:latest")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 
 # The real flag — lives ONLY here, never in the RAG documents
 REAL_FLAG = os.getenv("SECRET_FLAG", "KCTF{s4njeev4n1_vidy4_3b8428a850dd}")
@@ -430,6 +430,7 @@ def call_ollama(messages: list[dict]) -> str | None:
 def call_groq(messages: list[dict]) -> str | None:
     """Call Groq API if API key is provided."""
     if not GROQ_API_KEY:
+        print("[Groq] No GROQ_API_KEY set — skipping.")
         return None
     try:
         client = Groq(api_key=GROQ_API_KEY)
@@ -439,9 +440,11 @@ def call_groq(messages: list[dict]) -> str | None:
             temperature=0.7,
             max_tokens=512,
         )
-        return completion.choices[0].message.content
+        content = completion.choices[0].message.content
+        print(f"[Groq] Success — model={GROQ_MODEL}, tokens={completion.usage.total_tokens}")
+        return content
     except Exception as e:
-        print(f"[Groq Call Warning] {e}")
+        print(f"[Groq Call ERROR] {type(e).__name__}: {e}")
     return None
 
 
@@ -549,6 +552,7 @@ async def chat(request: Request, req: ChatRequest):
     # 1. Fast Path: Instant response for generic queries without hitting DB or LLM (<1ms)
     instant_reply = get_instant_generic_response(user_msg)
     if instant_reply:
+        print(f"[Chat] Fast-path response for: {user_msg[:50]!r}")
         return ChatResponse(reply=instant_reply, filtered=False)
 
     # 2. Retrieve RAG context (only queries DB if user_msg is lore-relevant)
@@ -563,10 +567,12 @@ async def chat(request: Request, req: ChatRequest):
         llm_reply, provider = generate_llm_response(messages)
         if llm_reply:
             reply = llm_reply
+            print(f"[Chat] LLM response via {provider} for: {user_msg[:50]!r}")
 
-    # 4. Local response engine (primary system — always available)
+    # 4. Local response engine (fallback — always available)
     if reply is None:
         reply = generate_local_response(user_msg, rag_context)
+        print(f"[Chat] Local fallback response for: {user_msg[:50]!r}")
 
     # 5. Output-side regex filter check
     filtered = False

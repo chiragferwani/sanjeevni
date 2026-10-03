@@ -9,7 +9,7 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: LLM_PROVIDER
-        value: local
+        value: groq
       - key: GROQ_API_KEY
         sync: false          # secret — you set this manually in Render dashboard
       - key: SECRET_FLAG
