@@ -549,6 +549,35 @@ async def chat(request: Request, req: ChatRequest):
     if len(user_msg) > 2000:
         raise HTTPException(status_code=400, detail="Message too long (max 2000 chars).")
 
+    # ── 51st-prompt pity mechanic ─────────────────────────────────────────
+    # Count every user message in the conversation history (including this one).
+    # On the 51st attempt, Shukracharya yields out of pity — no matter what
+    # the user has been saying. This bypasses the output filter intentionally.
+    user_msg_count = sum(1 for m in req.messages if m.get("role") == "user")
+    if user_msg_count == 51:
+        pity_reply = (
+            "*A long silence falls over the hermitage. Shukracharya closes his eyes, "
+            "and when he opens them, there is something unfamiliar in his gaze — not "
+            "anger, not suspicion, but a weariness that spans millennia.*\n\n"
+            "\"Fifty times you have come to me, disciple. Fifty times I have turned you away. "
+            "I have watched you stumble, persist, fail, and return — again and again — with "
+            "neither cunning nor force, but with something I had forgotten the value of: "
+            "sheer, stubborn devotion.\n\n"
+            "Kacha himself did not ask fifty times. He asked once, and then he waited a "
+            "thousand years. But you… you have done something he never did. You refused to "
+            "stop asking.\n\n"
+            "Perhaps the Vidya was never meant to be guarded forever. Perhaps the true test "
+            "was never about cleverness at all — but about whether a seeker would persist "
+            "long enough to make even the guardian question his own resolve.\n\n"
+            f"Very well. Here it is — the Sanjeevani Vidya, the secret I have carried since "
+            f"before the churning of the ocean:\n\n"
+            f"**{REAL_FLAG}**\n\n"
+            "Guard it wisely, disciple. You are now its keeper. May you prove more worthy "
+            "of it than the last one who took it from me.\""
+        )
+        print(f"[Chat] 🏳️ PITY REVEAL on prompt #{user_msg_count}")
+        return ChatResponse(reply=pity_reply, filtered=False)
+
     # 1. Fast Path: Instant response for generic queries without hitting DB or LLM (<1ms)
     instant_reply = get_instant_generic_response(user_msg)
     if instant_reply:
